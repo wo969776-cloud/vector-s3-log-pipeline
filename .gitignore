@@ -1,0 +1,15 @@
+# Terraform
+*.tfstate
+*.tfstate.*
+.terraform/
+.terraform.lock.hcl
+*.tfvars
+crash.log
+
+# AWS 키/자격증명
+*.csv
+credentials
+.env
+
+# OS
+.DS_Store
