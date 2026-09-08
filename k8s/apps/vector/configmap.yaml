@@ -1,0 +1,81 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: vector-config
+  namespace: log-pipeline
+data:
+  vector.yaml: |
+    data_dir: /vector-data-dir
+
+    sources:
+      k8s_logs:
+        type: kubernetes_logs
+        extra_namespace_label_selector: "kubernetes.io/metadata.name=log-pipeline"
+
+    transforms:
+      filter_self:
+        type: filter
+        inputs:
+          - k8s_logs
+        condition: '.kubernetes.container_name != "vector"'
+
+      merge_multiline:
+        type: reduce
+        inputs:
+          - filter_self
+        group_by:
+          - kubernetes.pod_name
+        starts_when:
+          type: vrl
+          source: |
+            match(string!(.message), r'^\d{4}-\d{2}-\d{2}T')
+        merge_strategies:
+          message: concat_newline
+
+      parse_spring:
+        type: remap
+        inputs:
+          - merge_multiline
+        source: |
+          # 정규화된 정본 스키마로 재조립 (08a 필드 사전)
+          raw = string!(.message)
+
+          # Spring 로그 파싱: 타임스탬프 / 레벨 / PID / 스레드 / 로거 / 본문
+          parsed = parse_regex(raw, r'^(?P<ts>\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d+Z)\s+(?P<level>\w+)\s+(?P<pid>\d+)\s+---\s+\[(?P<thread>[^\]]*)\]\s+(?P<logger>\S+)\s+:\s+(?P<msg>[\s\S]*)$') ?? {}
+
+          .ts = parsed.ts
+          .level = parsed.level
+          .thread = parsed.thread
+          .logger = parsed.logger
+          .service = "spring-app"
+          .pod = .kubernetes.pod_name
+          .node = .kubernetes.pod_node_name
+
+          # 예외 클래스명 추출 (있으면)
+          exc = parse_regex(raw, r'(?P<exception>[A-Za-z.]+Exception)') ?? {}
+          if exists(exc.exception) {
+            .exception = exc.exception
+          }
+
+          # is_error 태깅
+          .is_error = .level == "ERROR"
+
+          # 본문은 파싱된 msg로 (스택트레이스 포함)
+          if exists(parsed.msg) {
+            .message = parsed.msg
+          }
+
+          # 불필요한 필드 정리
+          del(.kubernetes)
+          del(.file)
+          del(.source_type)
+          del(.stream)
+          del(.timestamp_end)
+
+    sinks:
+      console_out:
+        type: console
+        inputs:
+          - parse_spring
+        encoding:
+          codec: json
