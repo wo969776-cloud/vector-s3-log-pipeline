@@ -74,6 +74,11 @@ data:
           }
 
           .is_error = .level == "ERROR"
+        
+          parsed_ts, ts_err = parse_timestamp(.ts, "%+")
+          if ts_err == null {
+            .timestamp = parsed_ts
+          }
 
           del(.kubernetes)
           del(.file)
