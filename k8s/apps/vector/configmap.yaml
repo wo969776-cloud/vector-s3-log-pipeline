@@ -97,6 +97,8 @@ data:
         compression: gzip
         encoding:
           codec: json
+        framing:
+          method: newline_delimited
         batch:
           max_bytes: 10000000
           timeout_secs: 60
