@@ -22,6 +22,16 @@ spec:
               valueFrom:
                 fieldRef:
                   fieldPath: spec.nodeName
+            - name: AWS_ACCESS_KEY_ID
+              valueFrom:
+                secretKeyRef:
+                  name: vector-aws-creds
+                  key: AWS_ACCESS_KEY_ID
+            - name: AWS_SECRET_ACCESS_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: vector-aws-creds
+                  key: AWS_SECRET_ACCESS_KEY
           volumeMounts:
             - name: config
               mountPath: /etc/vector

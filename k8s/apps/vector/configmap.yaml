@@ -74,7 +74,7 @@ data:
           }
 
           .is_error = .level == "ERROR"
-        
+
           parsed_ts, ts_err = parse_timestamp(.ts, "%+")
           if ts_err == null {
             .timestamp = parsed_ts
@@ -87,9 +87,22 @@ data:
           del(.timestamp_end)
 
     sinks:
-      console_out:
-        type: console
+      s3_out:
+        type: aws_s3
         inputs:
           - parse_logs
+        bucket: jaeyeong-log-pipeline-2026
+        region: ap-northeast-2
+        key_prefix: "logs/year=%Y/month=%m/day=%d/hour=%H/"
+        compression: gzip
         encoding:
           codec: json
+        batch:
+          max_bytes: 10000000
+          timeout_secs: 60
+        buffer:
+          type: disk
+          max_size: 268435488
+          when_full: block
+        request:
+          retry_attempts: 5
