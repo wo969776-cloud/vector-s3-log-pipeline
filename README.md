@@ -17,7 +17,7 @@
 ```
 [온프레미스 K8s 클러스터 - kubeadm 4노드]
   DB 의존형 Spring Boot 앱 ── MySQL
-  (MySQL 파드 삭제 → 앱 500 + ERROR 로그 유발)
+  (MySQL replicas=0으로 중지 → 앱 500 + ERROR 로그 유발)
       │  파드가 stdout에 로그 → 노드 /var/log/pods 에 기록
       ▼
   Vector DaemonSet (노드마다 1개)
